@@ -9,4 +9,9 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.anomalousmaker.hovercraftcontroller.MainActivity$PlaceholderFragment" >
 
+    <com.anomalousmaker.hovercraftcontroller.ControllerUI
+        android:id="@+id/controllerUI"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
 </RelativeLayout>

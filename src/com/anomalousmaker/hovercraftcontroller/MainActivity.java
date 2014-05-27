@@ -35,11 +35,8 @@ public class MainActivity extends Activity {
 		setContentView(R.layout.activity_main);
 
 		if (savedInstanceState == null) {
-			getFragmentManager().beginTransaction()
-			.add(R.id.container, new ControllerFragment()).commit();
+			getFragmentManager().beginTransaction().add(R.id.fragmentContainer, new ControllerFragment(), "ControllerUI").commit();
 		}
-		
-		ui = (ControllerUI) findViewById(R.id.controllerUI);
 	}
 
 	@Override
@@ -84,6 +81,11 @@ public class MainActivity extends Activity {
 
 					new AsyncTask<Object, String, Boolean>(){
 						@Override
+						protected void onPreExecute() {
+							ui = (ControllerUI) getFragmentManager().findFragmentByTag("ControllerUI").getView();
+						};
+						
+						@Override
 						protected Boolean doInBackground(Object... params) {
 
 							try {
@@ -124,7 +126,6 @@ public class MainActivity extends Activity {
 							ui.connection_status = status[0];
 
 							ui.invalidate();
-							ui.requestLayout();
 						}
 
 						@Override protected void onPostExecute(Boolean connected) {

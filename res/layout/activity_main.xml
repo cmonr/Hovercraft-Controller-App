@@ -1,14 +1,9 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/container"
+    android:id="@+id/fragmentContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context="com.anomalousmaker.hovercraftcontroller.MainActivity"
     tools:ignore="MergeRootFrame" >
-
-    <com.anomalousmaker.hovercraftcontroller.ControllerUI
-        android:id="@+id/controllerUI"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
 
 </FrameLayout>
