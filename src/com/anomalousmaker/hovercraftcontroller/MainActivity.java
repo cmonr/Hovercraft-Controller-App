@@ -1,33 +1,27 @@
 package com.anomalousmaker.hovercraftcontroller;
 
-import java.io.OutputStream;
 import java.util.Set;
-import java.util.UUID;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
-import android.os.AsyncTask;
+import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ArrayAdapter;
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
-	// UUID for RFCOMM Bluetooth Connection
-	private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
 
-	private ControllerUI ui;
+	private static final int REQUEST_ENABLE_BT = 1;
 	
-	private static Set<BluetoothDevice> btPairedDevices;
-	private static BluetoothDevice btDevice;
-	private static BluetoothSocket btSocket;
-	private static OutputStream btOutputStream;
+	private BluetoothConnectTask btConnectTask;
+
+	private Set<BluetoothDevice> btPairedDevices;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -35,14 +29,92 @@ public class MainActivity extends Activity {
 		setContentView(R.layout.activity_main);
 
 		if (savedInstanceState == null) {
+			// Not resuming, aka onLaunch
 			getFragmentManager().beginTransaction().add(R.id.fragmentContainer, new ControllerFragment(), "ControllerUI").commit();
+		}
+
+		// Enable Bluetooth
+		enableBluetooth();
+		
+		// Task to connect to Bluetooth device
+		btConnectTask = new BluetoothConnectTask();
+	}
+
+	public void enableBluetooth()
+	{
+		// Make sure Bluetooth is supported
+		if (BluetoothAdapter.getDefaultAdapter() == null)
+		{
+			exit("Bluetooth Adapter not found");
+		}
+
+
+		// Make sure Bluetooth is enabled
+		if (BluetoothAdapter.getDefaultAdapter().isEnabled() == false)
+		{
+			// Bluetooth enable dialog
+			Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+			startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
 		}
 	}
 
 	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		getMenuInflater().inflate(R.menu.main, menu);
-		return true;
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		switch (requestCode)
+		{
+		case REQUEST_ENABLE_BT:	// Enable Bluetooth request
+			if (resultCode == RESULT_CANCELED)
+				// Request to enable Bluetooth denied
+				//  Quitting due to rejection
+				exit("Could not enable Bluetooth");
+			break;
+		}
+	}
+	
+	public void createBluetoothDialog()
+	{
+		// Get list of paired devices
+		btPairedDevices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
+		
+		// Populate List View
+		ArrayAdapter<String> btArrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1);
+		for (BluetoothDevice device : btPairedDevices) {
+			btArrayAdapter.add(device.getName() + "\n" + device.getAddress());
+		}
+
+
+		// Build Alert Dialog
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle("Connect to:");
+
+		builder.setAdapter(btArrayAdapter, new OnClickListener() {
+			
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				// Make sure no active connect task is active
+				btConnectTask.cancel(true);
+				
+				// Create new task
+				btConnectTask = new BluetoothConnectTask();
+				btConnectTask.ui = (ControllerUI) getFragmentManager().findFragmentByTag("ControllerUI").getView();
+				
+				// Execute connection
+				btConnectTask.execute((BluetoothDevice)(btPairedDevices.toArray())[which]);
+				
+				// Remove the dialog
+				dialog.dismiss();		
+			}
+		});
+
+		builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+			public void onClick(DialogInterface dialog,int id) {
+				dialog.cancel();
+			}
+		});
+
+		builder.setCancelable(true);
+
+		builder.create().show();
 	}
 
 	@Override
@@ -53,112 +125,29 @@ public class MainActivity extends Activity {
 		switch(item.getItemId())
 		{
 		case R.id.menu_item_connect:
-
-			// Enable Bluetooth
-			//if (BluetoothAdapter.getDefaultAdapter().isEnabled() == false)
-
-
-			// Get list of paired Bluetooth Devices
-			ArrayAdapter<String> btArrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1);
-
-			btPairedDevices = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
-
-			for (BluetoothDevice device : btPairedDevices) {
-				btArrayAdapter.add(device.getName() + "\n" + device.getAddress());
-			}
-
-
-			// Build Alert Dialog
-			AlertDialog.Builder builder = new AlertDialog.Builder(this);
-			builder.setTitle("Connect to:");
-
-			builder.setAdapter(btArrayAdapter, new OnClickListener() {
-				@SuppressWarnings("static-access")
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-					// Set target device to connect to
-					btDevice = (BluetoothDevice)(btPairedDevices.toArray())[which];
-
-					new AsyncTask<Object, String, Boolean>(){
-						@Override
-						protected void onPreExecute() {
-							ui = (ControllerUI) getFragmentManager().findFragmentByTag("ControllerUI").getView();
-						};
-						
-						@Override
-						protected Boolean doInBackground(Object... params) {
-
-							try {
-								// Create socket
-								btSocket = btDevice.createRfcommSocketToServiceRecord(MY_UUID);
-							} catch (Exception e) {
-								e.printStackTrace();
-								return false;
-							}
-
-							// Make several attempts to connect
-							publishProgress("Connecting...");
-
-
-							for(int i=0; i<3; i++)
-							{
-								try {
-									btSocket.connect();
-
-									// Setup the Output Stream
-									btOutputStream = btSocket.getOutputStream();
-									return true;
-
-								} catch (Exception e) {
-									e.printStackTrace();
-								} finally {
-									if (i == 1)
-										publishProgress("Connecting... (2nd Attempt)");
-									else if (i == 2)
-										publishProgress("Connecting... (3rd Attempt)");
-								}
-							}
-							return false;
-						}
-
-						@Override protected void onProgressUpdate(String... status) {
-							super.onProgressUpdate(status);
-							ui.connection_status = status[0];
-
-							ui.invalidate();
-						}
-
-						@Override protected void onPostExecute(Boolean connected) {
-							super.onPostExecute(connected);
-							ui.enableUI(connected);
-
-							if (connected) {
-								// TODO: Change Menu Item from -Connect- to -Disconnect-
-								
-								// TODO: Create/enable BT Serial Interface/Communications
-							}
-						}
-
-					}.execute();
-
-					dialog.dismiss();		
-				}
-			});
-
-			builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-				public void onClick(DialogInterface dialog,int id) {
-					dialog.cancel();
-				}
-			});
-
-			builder.setCancelable(true);
-
-			builder.create().show();
+			createBluetoothDialog();
 
 			return true;
 		default:
 			break;
 		}
 		return super.onOptionsItemSelected(item);
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		getMenuInflater().inflate(R.menu.main, menu);
+		
+		enableBluetooth();
+		
+		return true;
+	}
+
+
+
+	public void exit(String msg)
+	{
+		Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+		finish();
 	}
 }

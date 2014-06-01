@@ -17,6 +17,8 @@ public class ControllerUI extends View {
 	private static final int holo = Color.parseColor("#FF33B5E5");
 	public static boolean btConnected = false;
 
+	public Hovercraft robot;
+	
 	// Painting Styles
 	private static Paint lines;	// Lines Style
 	private static Paint fill;	// Fill Style
@@ -32,7 +34,7 @@ public class ControllerUI extends View {
 	private static Rect right_rect_fill;
 
 	// Text Indicators
-	public static String connection_status = "Disconnected";
+	public static String status = "Disconnected";
 	private static String power_left_percentage = "-.--";
 	private static String left_throttle_percentage = "---";
 	private static String center_throttle_percentage = "---";
@@ -87,19 +89,25 @@ public class ControllerUI extends View {
 		// Background Color
 		setBackgroundColor(Color.BLACK);
 	}
+	
+	public void setStatus(String str)
+	{
+		status = str;
+		
+		invalidate();
+	}
 
 	public void enableUI(boolean connected)
 	{
 		btConnected = connected;
 		
 		if (connected){
-			connection_status = "Connected";
 			left_throttle_percentage = "0";
 			center_throttle_percentage = "0";
 			right_throttle_percentage = "0";
 			
+			robot.enableAll();
 		}else{
-			connection_status = "Disconnected";
 			power_left_percentage = "-.--";
 			left_throttle_percentage = "---";
 			center_throttle_percentage = "---";
@@ -109,7 +117,6 @@ public class ControllerUI extends View {
 		}
 		
 		invalidate();
-		requestLayout();
 	}
 	
 	protected void onDraw(Canvas canvas) {
@@ -145,7 +152,7 @@ public class ControllerUI extends View {
 		//  Connection
 		text.setTextSize(height * 0.05f);
 		text.setTextAlign(Align.LEFT);
-		canvas.drawText(connection_status, 10, height-10, text);
+		canvas.drawText(status, 10, height-10, text);
 
 		//  Power Left
 		text.setTextAlign(Align.RIGHT);
@@ -155,7 +162,7 @@ public class ControllerUI extends View {
 		text.setTextAlign(Align.CENTER);
 		canvas.drawText(left_throttle_percentage + "%", left_rect_bounds.centerX()+8, left_rect_bounds.top-12, text);
 		canvas.drawText(center_throttle_percentage + "%", center_rect_bounds.centerX()+8, center_rect_bounds.top-12, text);
-		canvas.drawText(right_throttle_percentage + "%", right_rect_bounds.centerX()+8, right_rect_bounds.top-12, text);
+		canvas.drawText(right_throttle_percentage + "%", right_rect_bounds.centerX()+8, right_rect_bounds.top-12, text);		
 	}
 
 	private static void drawRect(Rect rect, float x, float y, float w, float h)
@@ -183,15 +190,21 @@ public class ControllerUI extends View {
 						// Inside of box
 						left_rect_fill.set(left_rect_bounds.left, y, left_rect_bounds.right, left_rect_bounds.bottom);
 						left_throttle_percentage = String.valueOf((int) (100 * (left_rect_bounds.height() - (y - left_rect_bounds.top))) / left_rect_bounds.height());
+						
+						robot.setLeft(((float) (Integer.parseInt(left_throttle_percentage) / 100.0)) * 0.8f + 0.2f);
 					} else if (x >= left_rect_bounds.left && x <= left_rect_bounds.right){
 						if (y >= left_rect_bounds.bottom) {
 							// Below Box
 							left_rect_fill.set(left_rect_bounds.left, left_rect_bounds.bottom, left_rect_bounds.right, left_rect_bounds.bottom);
 							left_throttle_percentage = "0";
+							
+							robot.setLeft(0.0f);
 						} else {
 							// Above Box
 							left_rect_fill.set(left_rect_bounds.left, left_rect_bounds.top, left_rect_bounds.right, left_rect_bounds.bottom);
 							left_throttle_percentage = "100";
+							
+							robot.setLeft(1.0f);
 						}
 					}
 
@@ -199,17 +212,22 @@ public class ControllerUI extends View {
 					if (center_rect_bounds.contains(x, y)){
 						// Inside of box
 						center_rect_fill.set(center_rect_bounds.left, y, center_rect_bounds.right, center_rect_bounds.bottom);
-
 						center_throttle_percentage = String.valueOf((int) (100 * (center_rect_bounds.height() - (y - center_rect_bounds.top))) / center_rect_bounds.height());
+						
+						robot.setCenter(((float) (Integer.parseInt(center_throttle_percentage) / 100.0)) * 0.8f + 0.2f);
 					} else if (x >= center_rect_bounds.left && x <= center_rect_bounds.right){
 						if (y >= center_rect_bounds.bottom) {
 							// Below Box
 							center_rect_fill.set(center_rect_bounds.left, center_rect_bounds.bottom, center_rect_bounds.right, center_rect_bounds.bottom);
 							center_throttle_percentage = "0";
+							
+							robot.setCenter(0.0f);
 						} else {
 							// Above Box
 							center_rect_fill.set(center_rect_bounds.left, center_rect_bounds.top, center_rect_bounds.right, center_rect_bounds.bottom);
 							center_throttle_percentage = "100";
+							
+							robot.setCenter(1.0f);
 						}
 					}
 
@@ -217,17 +235,22 @@ public class ControllerUI extends View {
 					if (right_rect_bounds.contains(x, y)){
 						// Inside of box
 						right_rect_fill.set(right_rect_bounds.left, y, right_rect_bounds.right, right_rect_bounds.bottom);
-
 						right_throttle_percentage = String.valueOf((int) (100 * (right_rect_bounds.height() - (y - right_rect_bounds.top))) / right_rect_bounds.height());
+						
+						robot.setRight(((float) (Integer.parseInt(right_throttle_percentage) / 100.0)) * 0.8f + 0.2f);
 					} else if (x >= right_rect_bounds.left && x <= right_rect_bounds.right){
 						if (y >= right_rect_bounds.bottom) {
 							// Below Box
 							right_rect_fill.set(right_rect_bounds.left, right_rect_bounds.bottom, right_rect_bounds.right, right_rect_bounds.bottom);
 							right_throttle_percentage = "0";
+							
+							robot.setRight(0.0f);
 						} else {
 							// Above Box
 							right_rect_fill.set(right_rect_bounds.left, right_rect_bounds.top, right_rect_bounds.right, right_rect_bounds.bottom);
 							right_throttle_percentage = "100";
+							
+							robot.setRight(1.0f);
 						}
 					}
 				}
