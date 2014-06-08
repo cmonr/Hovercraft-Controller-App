@@ -6,15 +6,23 @@ import java.io.OutputStream;
 import android.os.Handler;
 
 public class Hovercraft {
+	private final int CENTER = 0;
+	private final int LEFT   = 1;
+	private final int RIGHT  = 2;
+	
 	private OutputStream btOutStream;
 	private Handler cmdQueueHandler;
 	private Runnable cmdQueueWorker;
+
+	private String lastCmd[];
 	
 
 	public Hovercraft(OutputStream os)
 	{
 		// Init Bluetooth OutputStream
 		btOutStream = os;
+		
+		lastCmd = new String[3];
 	}
 	
 	public void write(String str)
@@ -58,25 +66,37 @@ public class Hovercraft {
 		cmdQueueHandler.removeCallbacks(cmdQueueWorker);
 	}
 	
-	public void setCenter(float value)
+	private void setEDF(float value, int edf)
 	{
+		String cmd;
+		
 		// Workaround:
 		//  Value ranges from 0-1.
 		//  Math it such that it ranges from 0.25 to 0.35
 		value = value * 0.2f + 0.25f;
-		write("s0=" + String.valueOf(value) + ";");
+		cmd = "s" + String.valueOf(edf) + "=" + String.valueOf(value) + ";";
+		
+		if (cmd != lastCmd[edf])
+		{
+			write(cmd);
+			lastCmd[edf] = cmd;
+		}
+		
+	}
+	
+	public void setCenter(float value)
+	{
+		setEDF(value, CENTER);
 	}
 	
 	public void setLeft(float value)
 	{
-		value = value * 0.2f + 0.25f;
-		write("s2=" + String.valueOf(value) + ";");
+		setEDF(value, LEFT);
 	}
 	
 	public void setRight(float value)
 	{
-		value = value * 0.2f + 0.25f;
-		write("s1=" + String.valueOf(value) + ";");
+		setEDF(value, RIGHT);
 			
 	}
 }
