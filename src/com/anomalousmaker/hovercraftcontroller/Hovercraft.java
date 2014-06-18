@@ -2,6 +2,7 @@ package com.anomalousmaker.hovercraftcontroller;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.text.DecimalFormat;
 
 import android.os.Handler;
 
@@ -9,6 +10,7 @@ public class Hovercraft {
 	private final int CENTER = 0;
 	private final int LEFT   = 1;
 	private final int RIGHT  = 2;
+	private final int SERVO  = 3;
 	
 	private OutputStream btOutStream;
 	private Handler cmdQueueHandler;
@@ -24,7 +26,7 @@ public class Hovercraft {
 		// Init Bluetooth OutputStream
 		btOutStream = os;
 		
-		lastCmd = new String[3];
+		lastCmd = new String[4];
 		
 		floatFormat = new DecimalFormat("0.00");
 	}
@@ -53,19 +55,22 @@ public class Hovercraft {
 		setLeft(0);
 		setCenter(0);
 		setRight(0);
+		setServo(0.5f);
 		
-		// Enable EDFs
+		// Enable EDFs + Servo
 		write("s0e;");
 		write("s1e;");
 		write("s2e;");
+		write("s3e;");
 	}
 	
 	public void disableAll()
 	{
-		// Disable EDFs
+		// Disable EDFs + Servo
 		write("s0d;");
 		write("s1d;");
 		write("s2d;");
+		write("s3d;");
 		
 		cmdQueueHandler.removeCallbacks(cmdQueueWorker);
 	}
@@ -85,12 +90,12 @@ public class Hovercraft {
 			write(cmd);
 			lastCmd[edf] = cmd;
 		}
-		
 	}
 	
 	public void setCenter(float value)
 	{
-		setEDF(value, CENTER);
+		//setEDF(value, CENTER);
+		setServo(value);
 	}
 	
 	public void setLeft(float value)
@@ -101,6 +106,23 @@ public class Hovercraft {
 	public void setRight(float value)
 	{
 		setEDF(value, RIGHT);
-			
+	}
+	
+	public void setServo(float angle)
+	{
+
+		String cmd;
+		
+		// Workaround:
+		//  Value ranges from 0-1.
+		//  Math it such that it ranges from 0% - 75%
+		angle = angle * 0.75f;
+		cmd = "s" + String.valueOf(SERVO) + "=" + floatFormat.format(angle) + ";";
+		
+		if (cmd != lastCmd[SERVO])
+		{
+			write(cmd);
+			lastCmd[SERVO] = cmd;
+		}
 	}
 }
