@@ -13,6 +13,8 @@ public class Hovercraft {
 	private OutputStream btOutStream;
 	private Handler cmdQueueHandler;
 	private Runnable cmdQueueWorker;
+	
+	private DecimalFormat floatFormat;
 
 	private String lastCmd[];
 	
@@ -23,6 +25,8 @@ public class Hovercraft {
 		btOutStream = os;
 		
 		lastCmd = new String[3];
+		
+		floatFormat = new DecimalFormat("0.00");
 	}
 	
 	public void write(String str)
@@ -74,7 +78,7 @@ public class Hovercraft {
 		//  Value ranges from 0-1.
 		//  Math it such that it ranges from 0.25 to 0.35
 		value = value * 0.2f + 0.25f;
-		cmd = "s" + String.valueOf(edf) + "=" + String.valueOf(value) + ";";
+		cmd = "s" + String.valueOf(edf) + "=" + floatFormat.format(value) + ";";
 		
 		if (cmd != lastCmd[edf])
 		{
