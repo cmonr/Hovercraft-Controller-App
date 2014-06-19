@@ -94,18 +94,19 @@ public class Hovercraft {
 	
 	public void setCenter(float value)
 	{
-		//setEDF(value, CENTER);
-		setServo(value);
+		setEDF(value, CENTER);
 	}
 	
 	public void setLeft(float value)
 	{
-		setEDF(value, LEFT);
+		//setEDF(value, LEFT);
+		setServo(value);
 	}
 	
 	public void setRight(float value)
 	{
 		setEDF(value, RIGHT);
+		setEDF(value, LEFT);
 	}
 	
 	public void setServo(float angle)
