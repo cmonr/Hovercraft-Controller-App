@@ -25,20 +25,20 @@ public class ControllerUI extends View {
 	private static Paint text;	// Text Style
 
 	// UI Elements
-	private static Rect left_rect_bounds;
-	private static Rect center_rect_bounds;
-	private static Rect right_rect_bounds;
-
-	private static Rect left_rect_fill;
-	private static Rect center_rect_fill;
-	private static Rect right_rect_fill;
+	private static Rect joystick_bounds;
+	private static Rect hover_bounds;
+	private static Rect hover_fill;
+	
+	// Invisible UI Contact Areas
+	private static Rect joystick_contact_area;
+	private static Rect hover_contact_area;
 
 	// Text Indicators
 	public static String status = "Disconnected";
 	private static String power_left_percentage = "-.--";
-	private static String left_throttle_percentage = "---";
-	private static String center_throttle_percentage = "---";
-	private static String right_throttle_percentage = "---";
+	private static String thrust_percentage = "---";
+	private static String hover_percentage = "---";
+	private static String servo_percentage = "---";
 
 
 	public ControllerUI(Context context) {
@@ -77,13 +77,13 @@ public class ControllerUI extends View {
 
 
 		// UI Objects
-		left_rect_bounds = new Rect();
-		center_rect_bounds = new Rect();
-		right_rect_bounds = new Rect();
-
-		left_rect_fill = new Rect();
-		center_rect_fill = new Rect();
-		right_rect_fill = new Rect();
+		joystick_bounds = new Rect();
+		hover_bounds = new Rect();
+		hover_fill = new Rect();
+		
+		// UI Contact Areas 
+		joystick_contact_area = new Rect();
+		hover_contact_area = new Rect();
 
 
 		// Background Color
@@ -102,16 +102,16 @@ public class ControllerUI extends View {
 		btConnected = connected;
 		
 		if (connected){
-			left_throttle_percentage = "0";
-			center_throttle_percentage = "0";
-			right_throttle_percentage = "0";
+			thrust_percentage = "0";
+			servo_percentage = "0";
+			hover_percentage = "0";
 			
 			robot.enableAll();
 		}else{
 			power_left_percentage = "-.--";
-			left_throttle_percentage = "---";
-			center_throttle_percentage = "---";
-			right_throttle_percentage = "---";
+			thrust_percentage = "---";
+			servo_percentage = "---";
+			hover_percentage = "---";
 			
 			// TODO: Set fills to 0%
 		}
@@ -135,17 +135,16 @@ public class ControllerUI extends View {
 
 
 		// Update Interactive UI
-		drawRect(left_rect_bounds, width * (0.3f/2 + 0.075f), (height-20)/2, width*0.3f, width*0.3f);
-		drawRect(center_rect_bounds, width/2.0f, (height-20)/2, width*0.1f, width*0.3f);
-		drawRect(right_rect_bounds, width * (1 - (0.3f/2 + 0.075f)), (height-20)/2, width*0.3f, width*0.3f);
+		drawRect(joystick_bounds, width*0.25f, (height-20)/2.0f, (height-20)*0.75f, (height-20)*0.75f);
+		drawRect(hover_bounds, width*0.75f, (height-20)/2.0f, (height-20)*0.25f, (height-20)*0.75f);
+		
+		//  Redraw contact area here since _width_ and _height_ are determined on screen redraw 
+		drawRect(joystick_contact_area, width*0.25f, (height-20)/2.0f, (height-20)*(0.75f + 0.3f), (height-20)*(0.75f + 0.3f));
+		drawRect(hover_contact_area, width*0.75f, (height-20)/2.0f, (height-20)*(0.25f + 0.3f), (height-20)*(0.75f+ + 0.3f));
 
-		canvas.drawRect(left_rect_bounds, lines);
-		canvas.drawRect(center_rect_bounds, lines);
-		canvas.drawRect(right_rect_bounds, lines);
-
-		canvas.drawRect(left_rect_fill, fill);
-		canvas.drawRect(center_rect_fill, fill);
-		canvas.drawRect(right_rect_fill, fill);
+		canvas.drawRect(joystick_bounds, lines);
+		canvas.drawRect(hover_bounds, lines);
+		canvas.drawRect(hover_fill, fill);
 
 
 		// Update indicators
@@ -159,10 +158,12 @@ public class ControllerUI extends View {
 		canvas.drawText(power_left_percentage + "%", width-10, height-10, text);
 
 		//  Throttle Values
+		text.setTextAlign(Align.LEFT);
+		canvas.drawText(thrust_percentage + "%", joystick_bounds.left+8, joystick_bounds.top-12, text);
+		text.setTextAlign(Align.RIGHT);
+		canvas.drawText(servo_percentage + "%", joystick_bounds.right-8, joystick_bounds.top-12, text);
 		text.setTextAlign(Align.CENTER);
-		canvas.drawText(left_throttle_percentage + "%", left_rect_bounds.centerX()+8, left_rect_bounds.top-12, text);
-		canvas.drawText(center_throttle_percentage + "%", center_rect_bounds.centerX()+8, center_rect_bounds.top-12, text);
-		canvas.drawText(right_throttle_percentage + "%", right_rect_bounds.centerX()+8, right_rect_bounds.top-12, text);		
+		canvas.drawText(hover_percentage + "%", hover_bounds.centerX()+8, hover_bounds.top-12, text);		
 	}
 
 	private static void drawRect(Rect rect, float x, float y, float w, float h)
@@ -178,82 +179,81 @@ public class ControllerUI extends View {
 		{
 			if (event.getActionMasked() ==  MotionEvent.ACTION_MOVE)
 			{
+				boolean joystick_contact_area_touched = false;
+				boolean hover_contact_area_touched = false;
+				
 				// Cycle through all active points since onTouchEvent only generates an ACTION_MOVE for the first point...
 				for(int i=0; i<event.getPointerCount(); i++){
 
 					int x = (int) MotionEventCompat.getX(event, i);
 					int y = (int) MotionEventCompat.getY(event, i);
 
+					
+					// Thrust & Servo Control
+					if (joystick_contact_area.contains(x, y) && joystick_contact_area_touched == false){
+						// Inside of joystick hit area
+						if (joystick_bounds.contains(x, y)){
+							// Inside of visible bounds
+							thrust_percentage = String.valueOf((int) (100 * (joystick_bounds.height() - (y - joystick_bounds.top))) / joystick_bounds.height());
+							servo_percentage = String.valueOf((int) (100 * (joystick_bounds.width() - (joystick_bounds.right - x))) / joystick_bounds.width());
+						}else{
+							// Being set to either 0% or 100%
+							if (x < joystick_bounds.left){
+								servo_percentage = "0";
+							}else if (x > joystick_bounds.right){
+								servo_percentage = "100";
+							}else{
+								servo_percentage = String.valueOf((int) (100 * (joystick_bounds.width() - (joystick_bounds.right - x))) / joystick_bounds.width());
+							}
 
-					// Left Throttle 
-					if (left_rect_bounds.contains(x, y)){
-						// Inside of box
-						left_rect_fill.set(left_rect_bounds.left, y, left_rect_bounds.right, left_rect_bounds.bottom);
-						left_throttle_percentage = String.valueOf((int) (100 * (left_rect_bounds.height() - (y - left_rect_bounds.top))) / left_rect_bounds.height());
-						
-						robot.setLeft(((float) (Integer.parseInt(left_throttle_percentage) / 100.0)) * 0.8f + 0.2f);
-					} else if (x >= left_rect_bounds.left && x <= left_rect_bounds.right){
-						if (y >= left_rect_bounds.bottom) {
-							// Below Box
-							left_rect_fill.set(left_rect_bounds.left, left_rect_bounds.bottom, left_rect_bounds.right, left_rect_bounds.bottom);
-							left_throttle_percentage = "0";
-							
-							robot.setLeft(0.0f);
-						} else {
-							// Above Box
-							left_rect_fill.set(left_rect_bounds.left, left_rect_bounds.top, left_rect_bounds.right, left_rect_bounds.bottom);
-							left_throttle_percentage = "100";
-							
-							robot.setLeft(1.0f);
+							if (y < joystick_bounds.top){
+								thrust_percentage= "100";
+							}else if (y > joystick_bounds.bottom){
+								thrust_percentage= "0";
+							}else{
+								thrust_percentage = String.valueOf((int) (100 * (joystick_bounds.height() - (y - joystick_bounds.top))) / joystick_bounds.height());
+							}
 						}
+						
+						joystick_contact_area_touched = true;
 					}
-
-					// Center Throttle 
-					if (center_rect_bounds.contains(x, y)){
-						// Inside of box
-						center_rect_fill.set(center_rect_bounds.left, y, center_rect_bounds.right, center_rect_bounds.bottom);
-						center_throttle_percentage = String.valueOf((int) (100 * (center_rect_bounds.height() - (y - center_rect_bounds.top))) / center_rect_bounds.height());
-						
-						robot.setCenter(((float) (Integer.parseInt(center_throttle_percentage) / 100.0)) * 0.8f + 0.2f);
-					} else if (x >= center_rect_bounds.left && x <= center_rect_bounds.right){
-						if (y >= center_rect_bounds.bottom) {
-							// Below Box
-							center_rect_fill.set(center_rect_bounds.left, center_rect_bounds.bottom, center_rect_bounds.right, center_rect_bounds.bottom);
-							center_throttle_percentage = "0";
-							
-							robot.setCenter(0.0f);
-						} else {
-							// Above Box
-							center_rect_fill.set(center_rect_bounds.left, center_rect_bounds.top, center_rect_bounds.right, center_rect_bounds.bottom);
-							center_throttle_percentage = "100";
-							
-							robot.setCenter(1.0f);
+					
+					
+					// Hover Control 
+					if (hover_contact_area.contains(x, y) && hover_contact_area_touched == false){
+						// Inside of hover hit area
+						if (hover_bounds.contains(x,y)){
+							// Inside of visible bounds
+							hover_fill.set(hover_bounds.left, y, hover_bounds.right, hover_bounds.bottom);
+							hover_percentage = String.valueOf((int) (100 * (hover_bounds.height() - (y - hover_bounds.top))) / hover_bounds.height());
+						}else{
+							if (y < hover_bounds.top){
+								hover_fill.set(hover_bounds.left, hover_bounds.top, hover_bounds.right, hover_bounds.bottom);
+								hover_percentage= "100";
+							}else if (y > hover_bounds.bottom){
+								hover_fill.set(hover_bounds.left, hover_bounds.bottom, hover_bounds.right, hover_bounds.bottom);
+								hover_percentage= "0";
+							}else{
+								hover_fill.set(hover_bounds.left, y, hover_bounds.right, hover_bounds.bottom);
+								hover_percentage = String.valueOf((int) (100 * (joystick_bounds.height() - (y - joystick_bounds.top))) / joystick_bounds.height());
+							}
 						}
-					}
-
-					// Right Throttle 
-					if (right_rect_bounds.contains(x, y)){
-						// Inside of box
-						right_rect_fill.set(right_rect_bounds.left, y, right_rect_bounds.right, right_rect_bounds.bottom);
-						right_throttle_percentage = String.valueOf((int) (100 * (right_rect_bounds.height() - (y - right_rect_bounds.top))) / right_rect_bounds.height());
 						
-						robot.setRight(((float) (Integer.parseInt(right_throttle_percentage) / 100.0)) * 0.8f + 0.2f);
-					} else if (x >= right_rect_bounds.left && x <= right_rect_bounds.right){
-						if (y >= right_rect_bounds.bottom) {
-							// Below Box
-							right_rect_fill.set(right_rect_bounds.left, right_rect_bounds.bottom, right_rect_bounds.right, right_rect_bounds.bottom);
-							right_throttle_percentage = "0";
-							
-							robot.setRight(0.0f);
-						} else {
-							// Above Box
-							right_rect_fill.set(right_rect_bounds.left, right_rect_bounds.top, right_rect_bounds.right, right_rect_bounds.bottom);
-							right_throttle_percentage = "100";
-							
-							robot.setRight(1.0f);
-						}
+						hover_contact_area_touched = true;
 					}
 				}
+				
+				// Reset values if joystick area not touched
+				if (joystick_contact_area_touched == false)
+				{
+					thrust_percentage = "0";
+					servo_percentage = "50";
+				}
+				
+				// Update robot
+				robot.setThrust(Integer.parseInt(thrust_percentage)/100.0f);
+				robot.setServo(Integer.parseInt(servo_percentage)/100.0f);
+				robot.setHover(Integer.parseInt(hover_percentage)/100.0f);
 			}
 
 			// Request to redraw screen

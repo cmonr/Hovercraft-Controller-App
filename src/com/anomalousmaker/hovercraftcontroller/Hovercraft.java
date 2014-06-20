@@ -52,9 +52,8 @@ public class Hovercraft {
 		
 		// Set EDF values
 		//  (Start at 0)
-		setLeft(0);
-		setCenter(0);
-		setRight(0);
+		setHover(0);
+		setThrust(0);
 		setServo(0.5f);
 		
 		// Enable EDFs + Servo
@@ -92,18 +91,12 @@ public class Hovercraft {
 		}
 	}
 	
-	public void setCenter(float value)
+	public void setHover(float value)
 	{
 		setEDF(value, CENTER);
 	}
 	
-	public void setLeft(float value)
-	{
-		//setEDF(value, LEFT);
-		setServo(value);
-	}
-	
-	public void setRight(float value)
+	public void setThrust(float value)
 	{
 		setEDF(value, RIGHT);
 		setEDF(value, LEFT);
