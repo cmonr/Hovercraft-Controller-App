@@ -80,8 +80,8 @@ public class Hovercraft {
 		
 		// Workaround:
 		//  Value ranges from 0-1.
-		//  Math it such that it ranges from 0.25 to 0.35
-		value = value * 0.2f + 0.25f;
+		//  Math it such that it ranges from 0.25 to 0.7
+		value = value * 0.45f + 0.25f;
 		cmd = "s" + String.valueOf(edf) + "=" + floatFormat.format(value) + ";";
 		
 		if (cmd != lastCmd[edf])
@@ -106,6 +106,9 @@ public class Hovercraft {
 	{
 
 		String cmd;
+		
+		// Invert servo direction
+		angle = 1.0f - angle;
 		
 		// Workaround:
 		//  Value ranges from 0-1.
